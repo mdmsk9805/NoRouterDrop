@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">NoRouterDrop</string>
+    <string name="app_title">NoRouterDrop\nPhone to phone over Wi-Fi Direct</string>
+    <string name="status_off">NoRouterDrop is off</string>
+    <!-- Support address shown under menu > Contact / Support. Leave empty to show no address; currently the project support address (see CONFIG.md) -->
+    <string name="contact_email">business.msk846@gmail.com</string>
+    <!-- GitHub repository, format owner/repo; used by Check for updates and the Contact issues link (see CONFIG.md) -->
+    <string name="update_repo">mdmsk9805/NoRouterDrop</string>
+</resources>
