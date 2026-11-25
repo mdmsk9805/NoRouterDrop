@@ -17,6 +17,10 @@ on arrival with no "Accept" tap.
 > 3. The reconnect, send-queue, keep-alive and screen changes in this version
 >    are **not yet verified on a phone**. Unit tests pass, but they do not cover
 >    the radio.
+>
+> Later phone tests also showed a first transfer succeeding followed by failed
+> sends or reconnects with Android error code 0 or group disconnections.
+> Repeated transfers and reconnection remain unreliable on the tested phones.
 > See "Tested devices".
 
 ## What it does
