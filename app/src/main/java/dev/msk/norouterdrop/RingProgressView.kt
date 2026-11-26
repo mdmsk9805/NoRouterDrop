@@ -14,9 +14,13 @@ class RingProgressView @JvmOverloads constructor(ctx: Context, attrs: AttributeS
 
     private val density = resources.displayMetrics.density
     private val stroke = 12f * density
-    private val track = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = stroke; color = 0xFFD9E6E3.toInt() }
-    private val arc = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = stroke; color = 0xFF00796B.toInt(); strokeCap = Paint.Cap.ROUND }
-    private val text = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF222222.toInt(); textAlign = Paint.Align.CENTER; textSize = 32f * density; isFakeBoldText = true }
+    private fun themeColor(attr: Int, fallback: Int): Int {
+        val tv = android.util.TypedValue()
+        return if (context.theme.resolveAttribute(attr, tv, true)) tv.data else fallback
+    }
+    private val track = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = stroke; color = themeColor(com.google.android.material.R.attr.colorSurfaceVariant, 0xFFD9E6E3.toInt()) }
+    private val arc = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = stroke; color = themeColor(androidx.appcompat.R.attr.colorPrimary, 0xFF00796B.toInt()); strokeCap = Paint.Cap.ROUND }
+    private val text = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = themeColor(com.google.android.material.R.attr.colorOnSurface, 0xFF222222.toInt()); textAlign = Paint.Align.CENTER; textSize = 32f * density; isFakeBoldText = true }
     private val box = RectF()
 
     override fun onMeasure(w: Int, h: Int) {

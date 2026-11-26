@@ -50,7 +50,7 @@ class TransferService : Service() {
 
     private lateinit var store: TrustedStore
     private lateinit var localId: String
-    private lateinit var localName: String
+    @Volatile private var localName: String = ""
     private lateinit var transport: WifiDirectLink
 
     private val sessions = CopyOnWriteArrayList<Session>()
@@ -96,6 +96,8 @@ class TransferService : Service() {
         localId = TrustedStore.localId(this)
         localName = TrustedStore.localName(this)
         startForeground(NOTIF_ID, buildNotification("${Brand.NAME} is ready"))
+        val ver = try { packageManager.getPackageInfo(packageName, 0).let { "${it.versionName} (code ${it.longVersionCode})" } } catch (e: Exception) { "unknown" }
+        log("${Brand.NAME} version $ver, Android ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT}), ${Build.MODEL}")
         transport = WifiDirectLink(this, transportListener)
         transport.start()
         handler.postDelayed(keepAlive, KEEPALIVE_MS)
@@ -120,6 +122,7 @@ class TransferService : Service() {
                 transport.dropGroup()
             }
             if (!open) releaseLocks()
+            if (open || transport.groupUp) log("LINK: ${transport.diag()} sessions=${sessions.count { it.isOpen }} idle=${(now - lastActivity) / 1000}s queued=${synchronized(ql) { sendQueue.size }} appVisible=$appVisible")
             handler.postDelayed(this, KEEPALIVE_MS)
         }
     }
@@ -162,6 +165,18 @@ class TransferService : Service() {
 
     // ---------------------------------------------------------- public API for the UI
 
+    fun deviceName(): String = localName
+    fun deviceNumber(): String = shortId(localId).take(4)
+    /** Name shown to paired phones. (The Wi-Fi Direct name Android shows nearby cannot be changed by apps.) */
+    fun setDeviceName(name: String) {
+        val n = name.trim().take(40)
+        if (n.isEmpty()) return
+        localName = n
+        TrustedStore.setLocalName(this, n)
+        log("Device name set to $n")
+    }
+    fun refreshDiscovery() { transport.refreshDiscovery() }
+    @Volatile var appVisible = false
     fun myLabel(): String = "$localName (${shortId(localId)})"
 
     fun trustedPeers(): List<TrustedPeer> = store.all()
@@ -173,6 +188,7 @@ class TransferService : Service() {
     }
 
     @Volatile private var waitingUntil = 0L
+    @Volatile private var noReopenUntil = 0L
 
     /** "Wait" mode: this phone never sends an invite, only waits for the other phone to invite it. Avoids both phones inviting at once. */
     fun noteTap(what: String) { log("BUTTON: $what on this phone"); }
@@ -181,7 +197,7 @@ class TransferService : Service() {
         if (System.currentTimeMillis() < waitingUntil) return   // already waiting; ignore repeat taps
         waitingUntil = System.currentTimeMillis() + 180_000
         cleanupPairing()
-        transport.resetRadio("wait mode started")
+        if (transport.groupUp) log("A Wi-Fi Direct group is already up; wait mode keeps it") else transport.resetRadio("wait mode started")
         log("WAIT MODE (3 min): this phone will not send invites. On the OTHER phone tap 'Start pairing' and pick this phone. Accept the Android invite popup here if it appears.")
         post { uiListener?.onStatus("Waiting for the other phone to invite this phone...") }
         handler.postDelayed({
@@ -200,6 +216,15 @@ class TransferService : Service() {
         try {
             pairing = PairingSession()
             pairingPeerAddress = peer.address
+            val open = sessions.lastOrNull { it.isOpen && !it.isEncrypted }
+            if (transport.groupUp && open != null) {
+                log("Pairing over the existing Wi-Fi Direct channel with ${peer.name} (no new invite)")
+                pairingSessionRef = open
+                open.send(Envelope(Envelope.Kind.PAIR_HELLO, localId, localName,
+                    text = Base64.encodeToString(pairing!!.publicKeyEncoded, Base64.NO_WRAP), address = transport.myAddress ?: ""))
+                log("Sent PAIR_HELLO (my key)")
+                return
+            }
             transport.connectTo(peer.address)
             log("Pairing with ${peer.name}...")
         } catch (e: Throwable) { log("Pairing could not start: ${e.javaClass.simpleName} ${e.message ?: ""}") }
@@ -230,6 +255,7 @@ class TransferService : Service() {
         synchronized(ql) { sendQueue.remove(job) }
         try { job.file.delete() } catch (_: Exception) { }
         log("SEND FAILED: ${job.displayName} dropped ($why)")
+        HistoryStore.add(this, HistoryEntry(System.currentTimeMillis(), false, job.displayName, false, store.find(job.peerId)?.name ?: "phone"))
         post { uiListener?.onStatus("Could not send ${job.displayName}") }
     }
 
@@ -351,7 +377,7 @@ class TransferService : Service() {
             sessions.remove(session)
             transport.socketClosed(session.socket)
             // The group may still be up (only the channel dropped): a client reopens its channel to the owner.
-            handler.postDelayed({ if (sessions.none { it.isOpen }) transport.reopenClientSocket() }, 1500)
+            handler.postDelayed({ if (sessions.none { it.isOpen } && System.currentTimeMillis() >= noReopenUntil) transport.reopenClientSocket() }, 1500)
             receiving.remove(session)?.let {
                 try { it.out.close() } catch (_: Exception) { }
                 it.partFile.delete()
@@ -395,6 +421,18 @@ class TransferService : Service() {
     private fun onHello(session: Session, env: Envelope) {
         val trusted = store.find(env.fromId)
         if (trusted == null) {
+            if (pairing != null) {
+                // Pairing is in progress: the other phone's plain hello (sent before it saw our key) must not kill the pairing channel. Its PAIR_HELLO follows.
+                log("Plain hello from a phone that is not paired yet; pairing is in progress, so waiting for its pairing key")
+                return
+            }
+            if (transport.groupUp) {
+                // Keep the plain channel open so "Pair" can reuse it. Without keys it can only do pairing: files are declined.
+                log("An unpaired phone (${shortId(env.fromId)}) is connected on this group. Keeping the channel; tap Pair on ONE phone to pair.")
+                post { uiListener?.onStatus("Phone connected, not paired yet. Tap Pair on one phone.") }
+                return
+            }
+            noReopenUntil = System.currentTimeMillis() + 30_000
             log("An unknown phone connected (${shortId(env.fromId)}). Pair it first if it is yours. Closing only that channel.")
             session.close()
             return
@@ -527,6 +565,7 @@ class TransferService : Service() {
             }
             val where = savePublic(st.partFile, st.name)
             log("Got ${st.name} ✓  saved in $where")
+            HistoryStore.add(this, HistoryEntry(System.currentTimeMillis(), true, st.name, true, session.peerName ?: "phone"))
             post { uiListener?.onProgress(st.name, 100, true, true) }
             session.send(Envelope(Envelope.Kind.DONE, localId, localName))
             notifyFile(st.name)
@@ -618,6 +657,7 @@ class TransferService : Service() {
                 session.send(Envelope(Envelope.Kind.DONE, localId, localName, transferId = job.transferId))
                 ok = true
                 log("Sent ${job.displayName} ✓")
+                HistoryStore.add(this, HistoryEntry(System.currentTimeMillis(), false, job.displayName, true, store.find(job.peerId)?.name ?: "phone"))
                 post { uiListener?.onProgress(job.displayName, 100, false, true); uiListener?.onStatus("Sent ${job.displayName}") }
             } catch (e: Exception) {
                 log("Send of ${job.displayName} failed midway (${e.javaClass.simpleName}); it will be sent again")

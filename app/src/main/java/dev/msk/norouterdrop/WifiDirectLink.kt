@@ -17,7 +17,7 @@ import java.net.ServerSocket
 import java.net.Socket
 import java.util.concurrent.Executors
 
-data class PeerInfo(val address: String, val name: String, val available: Boolean)
+data class PeerInfo(val address: String, val name: String, val available: Boolean, val connected: Boolean = false)
 
 /**
  * Discovers nearby phones over Wi-Fi Direct and opens a TCP socket between two
@@ -71,7 +71,21 @@ class WifiDirectLink(
     /** Client side: open the channel to the group owner again while the group is still up. */
     fun reopenClientSocket() {
         val a = goAddr
-        if (state == State.CONNECTED && roleField == LinkRole.CLIENT && a != null && synchronized(openSockets) { openSockets.none { !it.isClosed } }) becomeClient(a)
+        if (state == State.CONNECTED && roleField == LinkRole.CLIENT && a != null && synchronized(openSockets) { openSockets.none { !it.isClosed } }) becomeClient(a, reopen = true)
+    }
+
+    /** The user tapped refresh: restart discovery (stop, short wait, start). Does nothing while an invite runs; keeps a working group. */
+    fun refreshDiscovery() {
+        if (state == State.OFF || state == State.CONNECTING) return
+        listener.onLog("Refresh: restarting discovery")
+        try { manager?.stopPeerDiscovery(channel, null) } catch (_: Exception) { }
+        handler.postDelayed({ if (state != State.OFF && state != State.CONNECTING) tryDiscover() }, 1200)
+    }
+
+    /** One line for the support log: what Android and this app think the link looks like right now. */
+    fun diag(): String {
+        val open = synchronized(openSockets) { openSockets.count { !it.isClosed } }
+        return "state=$state role=$roleField group=${if (state == State.CONNECTED) "up" else "none"} sockets=$open peers=${lastPeers.size}"
     }
     private var discBusy = 0
     private var discNextOk = 0L
@@ -85,7 +99,8 @@ class WifiDirectLink(
     private val discoverTick = object : Runnable {
         override fun run() {
             if (state != State.OFF) {
-                if (state != State.CONNECTING) tryDiscover()   // keep this phone visible to the other one
+                // Only while no group exists. While a group is up or an invite is running, extra discovery calls can disturb it.
+                if (state == State.DISCOVERING) tryDiscover()   // keep this phone visible to the other one
                 handler.postDelayed(this, 15_000)
             }
         }
@@ -149,8 +164,17 @@ class WifiDirectLink(
         }
         state = State.DISCOVERING
         listener.onStatus("Looking for nearby phones...")
-        resetRadio("app start")
         handler.postDelayed(discoverTick, 2500)
+        // A group may already exist (the user connected the phones in Android's own Wi-Fi Direct settings): reuse it, do not tear it down.
+        try {
+            manager.requestConnectionInfo(channel) { info: WifiP2pInfo ->
+                if (info.groupFormed && state == State.DISCOVERING) {
+                    listener.onLog("Found an existing Wi-Fi Direct group at app start (${if (info.isGroupOwner) "this phone owns it" else "this phone is a client"}); using it, not resetting")
+                    if (info.isGroupOwner) becomeServer() else becomeClient(info.groupOwnerAddress?.hostAddress)
+                    refreshPeers()
+                } else resetRadio("app start")
+            }
+        } catch (e: SecurityException) { resetRadio("app start") }
     }
 
     fun stop() {
@@ -170,6 +194,15 @@ class WifiDirectLink(
     fun connectTo(address: String, name: String? = null) {
         if (state == State.CONNECTING) { listener.onLog("Already connecting; not starting a second invite"); return }
         connectName = name
+        if (state == State.CONNECTED && synchronized(openSockets) { openSockets.any { !it.isClosed } }) {
+            listener.onLog("A Wi-Fi Direct group with an open channel already exists; reusing it, no new invite")
+            return
+        }
+        if (state == State.CONNECTED && roleField == LinkRole.CLIENT && goAddr != null) {
+            listener.onLog("Group is up, channel is closed; reopening the channel to the group owner instead of re-inviting")
+            becomeClient(goAddr, reopen = true)
+            return
+        }
         if (state == State.CONNECTED) {
             // (The send queue already waited for the other phone to connect to this group before it got here.)
             // The group can outlive the socket (the link closed but Android still shows the group). Tear it down and invite again.
@@ -269,6 +302,7 @@ class WifiDirectLink(
     /** Clears every leftover Wi-Fi Direct state: pending connect, group, service requests, discovery. Then rediscovers after a pause. */
     fun resetRadio(why: String, rediscover: Boolean = true) {
         val ch = channel ?: return
+        if (state == State.CONNECTED) { listener.onLog("Wi-Fi Direct group is up; keeping it ($why)"); return }
         listener.onLog("Cleaning Wi-Fi Direct state ($why)")
         try {
             manager?.cancelConnect(ch, act("cancelConnect"))
@@ -362,11 +396,11 @@ class WifiDirectLink(
         try {
             manager?.requestPeers(channel) { list ->
                 val out = list.deviceList.map {
-                    PeerInfo(it.deviceAddress, it.deviceName ?: "?", it.status == WifiP2pDevice.AVAILABLE)
+                    PeerInfo(it.deviceAddress, it.deviceName ?: "?", it.status == WifiP2pDevice.AVAILABLE, it.status == WifiP2pDevice.CONNECTED)
                 }
                 lastPeers = out
                 listener.onPeers(out)
-                listener.onLog("Nearby phones: " + out.joinToString { it.name + "=" + (if (it.available) "available" else "busy/invited") })
+                listener.onLog("Nearby phones: " + out.joinToString { it.name + "=" + (if (it.available) "available" else if (it.connected) "connected" else "busy/invited") })
             }
         } catch (_: SecurityException) { }
     }
@@ -403,7 +437,7 @@ class WifiDirectLink(
         }
     }
 
-    private fun becomeClient(goAddress: String?) {
+    private fun becomeClient(goAddress: String?, reopen: Boolean = false) {
         if (goAddress == null) return
         roleField = LinkRole.CLIENT
         goAddr = goAddress
@@ -416,9 +450,11 @@ class WifiDirectLink(
                 listener.onLog("Step 5: opening socket to $goAddress:$PORT")
                 var s: Socket? = null
                 var last: Exception? = null
-                for (attempt in 1..5) {
-                    try { val t = Socket(); t.connect(java.net.InetSocketAddress(goAddress, PORT), 5000); s = t; break }
-                    catch (e: Exception) { last = e; listener.onLog("Socket attempt $attempt/5 failed: ${e.javaClass.simpleName} ${e.message ?: ""}"); Thread.sleep(2000) }
+                val tries = if (reopen) 2 else 5
+                val timeout = if (reopen) 3000 else 5000
+                for (attempt in 1..tries) {
+                    try { val t = Socket(); t.connect(java.net.InetSocketAddress(goAddress, PORT), timeout); s = t; break }
+                    catch (e: Exception) { last = e; listener.onLog("Socket attempt $attempt/$tries failed: ${e.javaClass.simpleName} ${e.message ?: ""}"); if (attempt < tries) Thread.sleep(if (reopen) 1000 else 2000) }
                 }
                 if (s == null) throw last ?: IllegalStateException("no socket")
                 listener.onLog("Step 6: socket connected")
@@ -427,6 +463,7 @@ class WifiDirectLink(
                 handler.post { listener.onSocketReady(s, false) }
             } catch (e: Exception) {
                 clientBusy.set(false)
+                if (reopen) handler.post { listener.onLog("Could not reopen the channel; the group looks dead, so it is dropped and the next send invites again"); dropGroup() }
                 handler.post { listener.onLog("FAILED at step 5/6: could not open the socket to the group owner: ${e.javaClass.simpleName} ${e.message ?: ""}"); listener.onStatus("Channel failed; try again") }
             }
         }

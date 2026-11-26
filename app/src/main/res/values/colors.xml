@@ -1,4 +1,15 @@
 <resources>
     <color name="teal_700">#FF00796B</color>
     <color name="teal_500">#FF009688</color>
+    <color name="nrd_primary">#00796B</color>
+    <color name="nrd_on_primary">#FFFFFF</color>
+    <color name="nrd_primary_container">#C4EBE5</color>
+    <color name="nrd_on_primary_container">#00201C</color>
+    <color name="nrd_background">#F6FAF9</color>
+    <color name="nrd_surface">#F6FAF9</color>
+    <color name="nrd_surface_container">#E8EFEE</color>
+    <color name="nrd_surface_container_high">#DDE5E3</color>
+    <color name="nrd_on_surface">#171D1C</color>
+    <color name="nrd_on_surface_variant">#4B5755</color>
+    <color name="nrd_outline">#85938F</color>
 </resources>

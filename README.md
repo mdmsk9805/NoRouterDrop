@@ -9,19 +9,14 @@ on arrival with no "Accept" tap.
 > AES-256-GCM) has not had an independent security review. Do not rely on it for
 > anything where a failure would be serious.
 >
-> **What was tested on real phones, and what was not.** In three stages:
-> 1. A private test build called "Direct Test" (build 46ecc1cc) worked in both
->    directions on two phones.
-> 2. An earlier renamed NoRouterDrop build paired and sent one photo; repeat
->    sends then failed (Wi-Fi Direct invite error code 0).
-> 3. The reconnect, send-queue, keep-alive and screen changes in this version
->    are **not yet verified on a phone**. Unit tests pass, but they do not cover
->    the radio.
->
-> Later phone tests also showed a first transfer succeeding followed by failed
-> sends or reconnects with Android error code 0 or group disconnections.
-> Repeated transfers and reconnection remain unreliable on the tested phones.
+> **What was tested on real phones, and what was not.**
+> 1. A private test build called "Direct Test" worked in both directions on two phones.
+> 2. An earlier renamed NoRouterDrop build paired and sent one photo; repeat sends then failed (Wi-Fi Direct invite error code 0).
+> 3. On 26 Nov 2026 the owner reported that version 0.2.2 paired and sent files repeatedly without disconnecting on a Samsung A16 and a Honor X8d, after the Wi-Fi Direct link was first set up in Android's Wi-Fi settings. This is one person's report on two phones, not a guarantee for other devices.
+> 4. Version 0.3.0 only adds the manual in-app update. Its download and install steps have **not** been tried on a phone yet.
 > See "Tested devices".
+>
+> **Testers wanted.** If you try it, please open an issue with your phone models, Android versions, whether pairing and repeated sends worked, and the app log (Settings > Log, personal details removed).
 
 ## What it does
 
@@ -34,11 +29,13 @@ on arrival with no "Accept" tap.
 - A phone you never paired is declined automatically.
 - Everything after pairing is encrypted with AES-256-GCM. Each file is checked
   with SHA-256 before it is saved.
-- Transfers do not use the internet. No analytics, no account. The only internet request is the optional menu item "Check for updates", which asks GitHub for the newest release when you tap it (it never installs anything by itself).
+- Transfers do not use the internet. No analytics, no account. The only internet use is the manual button Settings > Check for updates. It runs only when you tap it: it asks GitHub Releases for the newest version, and if there is one you can tap "Download and install". The app downloads the APK from GitHub over https, checks that it has the same app id and the same signing key as the installed app (and the SHA-256 GitHub lists, when present), and then Android shows its own install screen. No background checks, no tracking. Updates can only install over the old version if both are signed with the same key; this project's debug builds use a debug key made on the builder's machine, so a release should use one fixed key kept by the maintainer.
 - If only the channel drops while the Wi-Fi Direct group stays up, the phone that joined the group opens the channel again by itself. A second channel from the same trusted phone replaces the older one, and a channel from an unknown phone is closed on its own, without touching the working link.
 - When both phones try to connect at once, the phone with the smaller id invites first and the other waits, so the two invites do not cancel each other. An existing group is never torn down while the other phone may still be connecting to it.
 - A round progress ring shows a file's percent while it is being received or sent. Several files can be queued; an open link is reused for the next file.
-- The three-dot menu holds: Log (copy it when reporting a problem), Check for updates, and Contact / Support.
+- Three screens with a bottom bar. **Receive**: your phone's name and a short number, a status line, and "Pair a new phone" (wait mode). **Send**: choose File, Media, Text or Paste (several items at once), then tap a phone in the Nearby devices list: paired phones send, other phones start pairing. The refresh button searches again. **Settings**: theme (system, light, dark), animations, save folder (fixed: Downloads/NoRouterDrop), history on/off, device name, restart discovery, Log (copy it when reporting a problem), Check for updates, Contact / Support, About.
+- History lists the last 100 files sent or received on this phone (stored only on the phone; can be turned off or cleared).
+- Accepting files from paired phones is always on and phones that are not paired are always declined. There is no "quick save" switch on purpose.
 
 ## Requirements
 
@@ -95,6 +92,7 @@ Use "Wait" on the other phone.
 | ACCESS_WIFI_STATE, CHANGE_WIFI_STATE | read and control Wi-Fi Direct |
 | ACCESS_NETWORK_STATE, CHANGE_NETWORK_STATE | check the state of the Wi-Fi Direct connection. Kept from the tested build; may be removable (not verified) |
 | INTERNET | Android requires it to open the local TCP socket between the two phones. It is also used for the optional "Check for updates" request to api.github.com. No other internet connections |
+| REQUEST_INSTALL_PACKAGES | only for the manual "Download and install" update button: lets Android's installer open the downloaded APK. Android still asks you to allow it once and to confirm each install |
 | WAKE_LOCK | keeps the Wi-Fi link and CPU awake while a link is open (released when idle) |
 | FOREGROUND_SERVICE, FOREGROUND_SERVICE_CONNECTED_DEVICE | keep the link running as a visible foreground service |
 | POST_NOTIFICATIONS | the foreground-service notice and a "file received" notice |
@@ -106,7 +104,7 @@ Android also asks you to turn Location on while discovery runs.
 
 1. Private "Direct Test" build 46ecc1cc: worked in both directions on the two phones below (details under the table).
 2. Earlier renamed NoRouterDrop build: pairing worked and one photo was sent from the Samsung to the Honor. Further sends failed with Wi-Fi Direct invite error code 0, and the link dropped about 10 seconds after a transfer.
-3. This version (reconnect with clean-up and retries, send queue, keep-alive, only one phone invites at a time, new screen with progress ring and three-dot menu): not yet verified on a phone.
+3. This version (reconnect with clean-up and retries, send queue, keep-alive, only one phone invites at a time, new bottom-bar screens, progress ring, no discovery calls while a link is up, faster channel reopen): not yet verified on a phone. 0.2.2 adds: a version line at the top of the log, no teardown of a Wi-Fi Direct group that already exists (for example one made in Android's Wi-Fi Direct settings), and pairing over that existing channel; also not yet phone-verified. 0.2.2 was reported working by the owner on two phones; 0.3.0 adds only the manual in-app update download/install on top (the update install itself has not been tried on a phone). A log note from the earlier test build shows that Android also closed that build's link a few seconds after a transfer; that build worked because the next send opened a new link. So a link that closes after a transfer is expected on these phones, and what matters is that the next send reconnects.
 
 | Phone | Android |
 |---|---|
@@ -132,3 +130,5 @@ more than two phones, sending with the screen off.
 ## License
 
 MIT. See LICENSE. Third-party libraries are listed in DEPENDENCIES.md.
+
+Screen layout inspired by LocalSend (Apache-2.0, localsend.org); no LocalSend code or assets are included. See NOTICE.

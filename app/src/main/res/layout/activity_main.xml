@@ -1,60 +1,123 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:orientation="vertical"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:padding="16dp">
+    android:fitsSystemWindows="true"
+    android:background="?android:attr/colorBackground">
 
-    <LinearLayout
-        android:orientation="horizontal"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center_vertical">
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="@string/app_title"
-            android:textStyle="bold"
-            android:textSize="16sp" />
-        <TextView android:id="@+id/menuButton"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:gravity="center"
-            android:text="&#8942;"
-            android:textSize="26sp"
-            android:contentDescription="More"
-            android:background="?android:attr/selectableItemBackgroundBorderless" />
-    </LinearLayout>
+    <FrameLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1">
 
-    <TextView android:id="@+id/statusText"
+        <!-- RECEIVE -->
+        <FrameLayout android:id="@+id/paneReceive" android:layout_width="match_parent" android:layout_height="match_parent">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_gravity="top|end" android:orientation="horizontal" android:gravity="end"
+                android:paddingEnd="12dp" android:paddingTop="8dp">
+                <ImageButton android:id="@+id/historyButton" android:layout_width="48dp" android:layout_height="48dp"
+                    android:src="@drawable/ic_history" android:contentDescription="History"
+                    android:background="?attr/selectableItemBackgroundBorderless" android:tint="?attr/colorOnSurface" />
+                <ImageButton android:id="@+id/infoButton" android:layout_width="48dp" android:layout_height="48dp"
+                    android:src="@drawable/ic_info" android:contentDescription="About"
+                    android:background="?attr/selectableItemBackgroundBorderless" android:tint="?attr/colorOnSurface" />
+            </LinearLayout>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_gravity="center" android:orientation="vertical" android:gravity="center_horizontal"
+                android:layout_marginBottom="40dp">
+                <dev.msk.norouterdrop.DeviceBadgeView android:id="@+id/badge"
+                    android:layout_width="240dp" android:layout_height="240dp" />
+                <TextView android:id="@+id/deviceName" android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp" android:gravity="center" android:paddingHorizontal="24dp"
+                    android:textSize="30sp" android:textColor="?attr/colorOnSurface" android:maxLines="2" android:ellipsize="end" />
+                <TextView android:id="@+id/deviceNumber" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp" android:textSize="20sp" android:textColor="?attr/colorOnSurfaceVariant" />
+                <TextView android:id="@+id/statusText" android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="18dp" android:gravity="center" android:paddingHorizontal="32dp"
+                    android:textSize="14sp" android:textColor="?attr/colorOnSurfaceVariant" />
+            </LinearLayout>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_gravity="bottom" android:orientation="vertical" android:gravity="center_horizontal"
+                android:paddingBottom="24dp" android:paddingHorizontal="24dp">
+                <TextView android:id="@+id/pairHint" android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:gravity="center" android:textSize="13sp" android:textColor="?attr/colorOnSurfaceVariant"
+                    android:layout_marginBottom="10dp" />
+                <com.google.android.material.button.MaterialButton android:id="@+id/waitButton"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="Pair a new phone" app:icon="@drawable/ic_phone" />
+            </LinearLayout>
+        </FrameLayout>
+
+        <!-- SEND -->
+        <ScrollView android:id="@+id/paneSend" android:layout_width="match_parent" android:layout_height="match_parent"
+            android:visibility="gone" android:fillViewport="true">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="vertical" android:padding="16dp">
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:text="Selection" android:textSize="20sp" android:textColor="?attr/colorOnSurface"
+                    android:layout_marginTop="8dp" android:layout_marginBottom="10dp" />
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                    <com.google.android.material.button.MaterialButton android:id="@+id/selFile"
+                        style="@style/Widget.Material3.Button.TonalButton"
+                        android:layout_width="0dp" android:layout_height="84dp" android:layout_weight="1"
+                        android:layout_marginEnd="6dp" android:text="File" android:insetTop="0dp" android:insetBottom="0dp"
+                        app:icon="@drawable/ic_file" app:iconGravity="top" app:cornerRadius="16dp" android:paddingHorizontal="4dp" />
+                    <com.google.android.material.button.MaterialButton android:id="@+id/selMedia"
+                        style="@style/Widget.Material3.Button.TonalButton"
+                        android:layout_width="0dp" android:layout_height="84dp" android:layout_weight="1"
+                        android:layout_marginHorizontal="3dp" android:text="Media" android:insetTop="0dp" android:insetBottom="0dp"
+                        app:icon="@drawable/ic_media" app:iconGravity="top" app:cornerRadius="16dp" android:paddingHorizontal="4dp" />
+                    <com.google.android.material.button.MaterialButton android:id="@+id/selText"
+                        style="@style/Widget.Material3.Button.TonalButton"
+                        android:layout_width="0dp" android:layout_height="84dp" android:layout_weight="1"
+                        android:layout_marginHorizontal="3dp" android:text="Text" android:insetTop="0dp" android:insetBottom="0dp"
+                        app:icon="@drawable/ic_text" app:iconGravity="top" app:cornerRadius="16dp" android:paddingHorizontal="4dp" />
+                    <com.google.android.material.button.MaterialButton android:id="@+id/selPaste"
+                        style="@style/Widget.Material3.Button.TonalButton"
+                        android:layout_width="0dp" android:layout_height="84dp" android:layout_weight="1"
+                        android:layout_marginStart="6dp" android:text="Paste" android:insetTop="0dp" android:insetBottom="0dp"
+                        app:icon="@drawable/ic_paste" app:iconGravity="top" app:cornerRadius="16dp" android:paddingHorizontal="4dp" />
+                </LinearLayout>
+
+                <LinearLayout android:id="@+id/selectionBar" android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="horizontal" android:gravity="center_vertical" android:visibility="gone"
+                    android:layout_marginTop="12dp" android:paddingStart="16dp" android:paddingEnd="4dp"
+                    android:background="@drawable/bg_card">
+                    <TextView android:id="@+id/selectionText" android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:textSize="15sp" android:textColor="?attr/colorOnSurface" android:paddingVertical="12dp" />
+                    <ImageButton android:id="@+id/selectionClear" android:layout_width="48dp" android:layout_height="48dp"
+                        android:src="@drawable/ic_close" android:contentDescription="Clear selection"
+                        android:background="?attr/selectableItemBackgroundBorderless" android:tint="?attr/colorOnSurfaceVariant" />
+                </LinearLayout>
+
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="horizontal" android:gravity="center_vertical" android:layout_marginTop="22dp">
+                    <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                        android:text="Nearby devices" android:textSize="20sp" android:textColor="?attr/colorOnSurface" />
+                    <ImageButton android:id="@+id/refreshButton" android:layout_width="48dp" android:layout_height="48dp"
+                        android:src="@drawable/ic_refresh" android:contentDescription="Refresh"
+                        android:background="?attr/selectableItemBackgroundBorderless" android:tint="?attr/colorOnSurface" />
+                </LinearLayout>
+                <TextView android:id="@+id/deviceListHint" android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:textSize="13sp" android:textColor="?attr/colorOnSurfaceVariant" android:layout_marginBottom="8dp" />
+                <LinearLayout android:id="@+id/deviceList" android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="vertical" />
+                <TextView android:id="@+id/deviceEmpty" android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:gravity="center" android:padding="24dp" android:textSize="14sp"
+                    android:textColor="?attr/colorOnSurfaceVariant"
+                    android:text="No phone found yet.\nOpen NoRouterDrop on the other phone, keep both screens on and Location on, then tap refresh." />
+            </LinearLayout>
+        </ScrollView>
+
+        <!-- SETTINGS -->
+        <ScrollView android:id="@+id/paneSettings" android:layout_width="match_parent" android:layout_height="match_parent"
+            android:visibility="gone">
+            <LinearLayout android:id="@+id/settingsList" android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="vertical" android:padding="16dp" />
+        </ScrollView>
+    </FrameLayout>
+
+    <com.google.android.material.bottomnavigation.BottomNavigationView android:id="@+id/bottomNav"
         android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:text="@string/status_off" android:textSize="15sp" />
-
-    <TextView android:id="@+id/deviceText"
-        android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:layout_marginTop="2dp" android:textSize="12sp" />
-
-    <TextView
-        android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:layout_marginTop="16dp" android:text="Connected devices (long-press to remove)"
-        android:textStyle="bold" />
-
-    <ListView android:id="@+id/trustedList"
-        android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" />
-
-    <Button android:id="@+id/sendButton"
-        android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:text="Send a file" />
-
-    <Button android:id="@+id/pairButton"
-        android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
-        android:text="1. Start pairing (tap on ONE phone only)" />
-
-    <Button android:id="@+id/waitButton"
-        android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:text="2. Wait for the other phone (tap on the OTHER phone)" />
-
+        app:menu="@menu/bottom_nav" />
 </LinearLayout>

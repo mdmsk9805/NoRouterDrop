@@ -1,0 +1,4 @@
+NoRouterDrop
+Copyright (c) 2026 MSK. MIT licence, see LICENSE.
+
+Design credit: the three-screen layout (Receive / Send / Settings with a nearby-devices list) is inspired by LocalSend, https://localsend.org (Apache License 2.0, https://github.com/localsend/localsend). No LocalSend source code, text, icons, logo or other assets are included in this project. All icons are drawn for this project.

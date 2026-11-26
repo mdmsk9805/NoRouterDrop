@@ -22,6 +22,8 @@ release, create your own keystore and keep it out of the repository (`*.jks` and
 `*.keystore` are git-ignored). No secrets or server settings are needed to
 build or run this app.
 
+Updates: the in-app update only installs over the old version when both APKs carry the same signing certificate. Debug keys are generated per machine, so build every version you publish with the same keystore. The app refuses an update whose signer differs and says so.
+
 Reproducibility: dependencies are fixed to exact versions in `app/build.gradle`.
 Byte-identical APKs across machines are not guaranteed (debug signing and build
 paths), so compare behaviour, not hashes, across builders.

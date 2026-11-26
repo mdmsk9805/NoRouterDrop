@@ -9,7 +9,7 @@ sealed class UpdateResult {
     object NotConfigured : UpdateResult()
     object NoRelease : UpdateResult()
     data class UpToDate(val current: String) : UpdateResult()
-    data class Newer(val current: String, val latest: String, val pageUrl: String, val apkUrl: String?) : UpdateResult()
+    data class Newer(val current: String, val latest: String, val pageUrl: String, val apkUrl: String?, val sha256: String? = null) : UpdateResult()
     data class Failed(val why: String) : UpdateResult()
 }
 
@@ -35,14 +35,15 @@ object UpdateCheck {
         val tag = o.getString("tag_name")
         val page = o.getString("html_url")
         var apk: String? = null
+        var sha: String? = null
         val assets = o.optJSONArray("assets")
         if (assets != null) for (i in 0 until assets.length()) {
             val a = assets.getJSONObject(i)
-            if (a.optString("name").endsWith(".apk", true)) { apk = a.optString("browser_download_url"); break }
+            if (a.optString("name").endsWith(".apk", true)) { apk = a.optString("browser_download_url"); sha = a.optString("digest").takeIf { it.startsWith("sha256:") }?.removePrefix("sha256:"); break }
         }
         fun ok(u: String?) = u != null && u.startsWith("https://github.com/")
         if (!ok(page)) UpdateResult.Failed("unexpected reply")
-        else if (isNewer(current, tag)) UpdateResult.Newer(current, tag, page, apk?.takeIf { ok(it) })
+        else if (isNewer(current, tag)) UpdateResult.Newer(current, tag, page, apk?.takeIf { ok(it) }, sha)
         else UpdateResult.UpToDate(current)
     } catch (e: Exception) { UpdateResult.Failed("could not read the reply") }
 

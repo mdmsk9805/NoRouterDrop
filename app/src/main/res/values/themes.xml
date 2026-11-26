@@ -1,8 +1,21 @@
 <resources>
-    <style name="Theme.NoRouterDrop" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <item name="colorPrimary">@color/teal_700</item>
-        <item name="colorPrimaryVariant">@color/teal_700</item>
-        <item name="colorSecondary">@color/teal_500</item>
-        <item name="android:statusBarColor">@color/teal_700</item>
+    <style name="Theme.NoRouterDrop" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/nrd_primary</item>
+        <item name="colorOnPrimary">@color/nrd_on_primary</item>
+        <item name="colorPrimaryContainer">@color/nrd_primary_container</item>
+        <item name="colorOnPrimaryContainer">@color/nrd_on_primary_container</item>
+        <item name="colorSecondaryContainer">@color/nrd_primary_container</item>
+        <item name="colorOnSecondaryContainer">@color/nrd_on_primary_container</item>
+        <item name="colorSurface">@color/nrd_surface</item>
+        <item name="colorOnSurface">@color/nrd_on_surface</item>
+        <item name="colorSurfaceVariant">@color/nrd_surface_container_high</item>
+        <item name="colorOnSurfaceVariant">@color/nrd_on_surface_variant</item>
+        <item name="colorSurfaceContainer">@color/nrd_surface_container</item>
+        <item name="colorSurfaceContainerHigh">@color/nrd_surface_container_high</item>
+        <item name="colorOutline">@color/nrd_outline</item>
+        <item name="android:colorBackground">@color/nrd_background</item>
+        <item name="android:statusBarColor">@color/nrd_background</item>
+        <item name="android:navigationBarColor">@color/nrd_surface_container</item>
+        <item name="android:windowLightStatusBar">@bool/nrd_light_bars</item>
     </style>
 </resources>

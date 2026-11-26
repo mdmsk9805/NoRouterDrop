@@ -1,0 +1,13 @@
+<resources>
+    <color name="nrd_primary">#7FD6C9</color>
+    <color name="nrd_on_primary">#00382F</color>
+    <color name="nrd_primary_container">#00504A</color>
+    <color name="nrd_on_primary_container">#B2F0E6</color>
+    <color name="nrd_background">#101516</color>
+    <color name="nrd_surface">#101516</color>
+    <color name="nrd_surface_container">#1B2224</color>
+    <color name="nrd_surface_container_high">#262E30</color>
+    <color name="nrd_on_surface">#E1E6E5</color>
+    <color name="nrd_on_surface_variant">#A9B4B2</color>
+    <color name="nrd_outline">#5E6B69</color>
+</resources>
